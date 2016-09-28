@@ -186,22 +186,32 @@ if [ ! -z "$JAVA_PATH" ]; then
 fi
 
 # Generate Subject Alternate Names
-SAN_OPENSSL="DNS.1:localhost"
-SAN_JAVA="dns:localhost,ip:127.0.0.1"
-count=1
+SAN_OPENSSL="DNS.1:$HOST_NAME,DNS.2:localhost"
+SAN_JAVA="dns:$HOST_NAME,dns:localhost,ip:127.0.0.1"
+count=2
 for ipaddress in $IP_ADDRESSES
 do
     SAN_JAVA="$SAN_JAVA,ip:$ipaddress"
     SAN_OPENSSL="$SAN_OPENSSL,IP.$count:$ipaddress"
     count=$((count+1))
 done
-count=2
+count=3
 for alias in $ALIASES
 do
     SAN_JAVA="$SAN_JAVA,dns:$alias"
     SAN_OPENSSL="$SAN_OPENSSL,DNS.$count:$alias"
     count=$((count+1))
 done
+
+# Generate the openssl key and csr
+if [ ! -f $PKI_PATH/$HOST_NAME.openssl.key ] || [ ! -f $PKI_PATH/$HOST_NAME.openssl.csr ]; then
+    echo "Generating OpenSSL CSR $HOST_NAME.openssl.csr"
+    echo "Aliases CN=$HOST_NAME SAN=$SAN_OPENSSL"
+    openssl req -new -newkey rsa:2048 -days $KEY_VALIDITY -nodes -keyout $PKI_PATH/$HOST_NAME.openssl.key -out $PKI_PATH/$HOST_NAME.openssl.csr -subj "/CN=$HOST_NAME" -config \
+        <(printf "[req]\ndistinguished_name = req_distinguished_name\nreq_extensions = v3_req\nprompt = no\n[req_distinguished_name]\nCN = $HOST_NAME\n[v3_req]\nkeyUsage = keyEncipherment, dataEncipherment\nextendedKeyUsage = serverAuth\nsubjectAltName = $SAN_OPENSSL") \
+          > /dev/null 2>&1
+    ACTION=true
+fi      
 
 # Generate the openssl key and csr
 if [ ! -f $PKI_PATH/$HOST_NAME.openssl.key ] || [ ! -f $PKI_PATH/$HOST_NAME.openssl.csr ]; then
