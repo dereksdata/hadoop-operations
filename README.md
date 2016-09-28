@@ -2,6 +2,7 @@
 Scripts to support Hadoop Operations such as Linux kernel configuration, PKI, etc.
 
 **Gencerts (gencerts.sh)**
+
 Notes
 - Local host and IP combinations all auto-generated
 - Private Root CA support
