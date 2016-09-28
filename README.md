@@ -16,7 +16,10 @@ Generate OpenSSH and Java keys and Jetty obscured password for the local host
   -d,--directory <directory to locate files>           default=$PKI_PATH
   
   -r,--root-cert-url <url to download private root ca cert> 
-  
+
+Example:
+
+./gencerts.sh -a www.fred.nerk.local,admin.fred.nerk.local -p supersecret
 
 Notes
 - Local host and IP combinations all auto-generated
