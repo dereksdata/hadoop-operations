@@ -2,14 +2,21 @@
 Scripts to support Hadoop Operations such as Linux kernel configuration, PKI, etc.
 
 **Gencerts (gencerts.sh)**
+
 Usage gencerts.sh [OPTION]
 
 Generate OpenSSH and Java keys and Jetty obscured password for the local host
+
   -a,--aliases <additional aliases to use, delimited>  e.g. fred.nerk.local
+  
   -k,--key-validity <key validity in days>             default=$KEY_VALIDITY
+  
   -p,--password <keystore password>                    default=$STOREPASS
+  
   -d,--directory <directory to locate files>           default=$PKI_PATH
+  
   -r,--root-cert-url <url to download private root ca cert> 
+  
 
 Notes
 - Local host and IP combinations all auto-generated
