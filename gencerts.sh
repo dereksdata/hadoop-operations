@@ -51,7 +51,7 @@ ShowHelp() {
 
 ImportCert() {
     if [ -f "$1" ] && [ -f "$2" ]; then
-        alias_present=$(keytool -list -v -keystore $1 -storepass changeit | grep "Alias name: $3")
+        alias_present=$(keytool -list -v -keystore $1 -storepass $STOREPASS | grep "Alias name: $3")
         if [ -z "$alias_present" ]; then 
             if [[ $1 == "$SYSTEM_JAVA_CACERTS" ]]; then
                 echo "Backing up $1"
@@ -223,7 +223,7 @@ fi
 # Create the csr or import the certificate if the alias is not already present
 if [ -f $SYSTEM_JAVA_CACERTS ]; then
     if [ -f $KEYSTORE ]; then
-        alias_present=$(keytool -list -v -keystore $KEYSTORE -storepass changeit | grep "Alias name: $HOST_NAME")
+        alias_present=$(keytool -list -v -keystore $KEYSTORE -storepass $STOREPASS | grep "Alias name: $HOST_NAME")
         if [ ! -z "$alias_present" ]; then 
             if [ -f $PKI_PATH/$HOST_NAME.java.crt ]; then
                 echo "Importing certificate $HOST_NAME.java.crt into Java keystore $KEYSTORE"
