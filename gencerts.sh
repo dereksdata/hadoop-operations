@@ -2,19 +2,24 @@
 #
 # Automated cert generation script for Hadoop cluster and other PKI integrated hosts
 #
-# Version 1.1
+# Version 1.2
 # dereksdata.com
 #
 # Changelog 
-#   1.0 Initial release 
-#   1.1 Mod for subject alternate name 
+#   1.2 2017-08-02  Added short hostname
+#                   Backup file dating
+#                   Create pem
+#                   Support for crt or cer back from CA
+#   1.1 2016-09-16  Mod for subject alternate name 
+#   1.0             Initial release 
 #
 
-echo "gencerts v1.1"
+echo "gencerts v1.2"
 
 # Standard locations and host information
 DOMAIN_NAME=$(dnsdomainname)
 HOST_NAME=$(hostname)
+HOST_NAME_SHORT=$(hostname -s)
 IP_ADDRESSES=$(/sbin/ifconfig | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')
 
 #Public default settings
@@ -33,7 +38,7 @@ JETTYOBS=$PKI_PATH/jettyobs
 
 ShowHelp() {
     echo "Usage gencerts.sh [OPTION]"
-    echo "Generate OpenSSH and Java keys and Jetty obscured password for the local host"
+    echo "Generate OpenSSH, Java certs and Jetty obscured password for the local host"
     echo
     echo "  -a,--aliases <additional aliases to use, delimited>  e.g. fred.nerk.local"
     echo "  -k,--key-validity <key validity in days>             default=$KEY_VALIDITY"
@@ -55,7 +60,7 @@ ImportCert() {
         if [ -z "$alias_present" ]; then 
             if [[ $1 == "$SYSTEM_JAVA_CACERTS" ]]; then
                 echo "Backing up $1"
-                cp -n $1 $1.original
+                cp -n $1 $1.`date +%Y%m%d-%H%M%S`.bak
             fi
             echo "Adding $2 to $1 as alias $3"
             keytool -import -trustcacerts -alias $3 -file $2 -keystore $1 -storepass $STOREPASS -noprompt
@@ -186,8 +191,8 @@ if [ ! -z "$JAVA_PATH" ]; then
 fi
 
 # Generate Subject Alternate Names
-SAN_OPENSSL="DNS.1:$HOST_NAME,DNS.2:localhost"
-SAN_JAVA="dns:$HOST_NAME,dns:localhost,ip:127.0.0.1"
+SAN_OPENSSL="DNS.1:$HOST_NAME,DNS.2:$HOST_NAME_SHORT,DNS.3:localhost"
+SAN_JAVA="dns:$HOST_NAME,dns:$HOST_NAME_SHORT,dns:localhost,ip:127.0.0.1"
 count=2
 for ipaddress in $IP_ADDRESSES
 do
@@ -223,11 +228,23 @@ if [ ! -f $PKI_PATH/$HOST_NAME.openssl.key ] || [ ! -f $PKI_PATH/$HOST_NAME.open
     ACTION=true
 fi        
 
-# Add to the local openssl certs
+# Check for Microsoft CA generated cert (cer) file, copy to crt
+if [ -f $PKI_PATH/$HOST_NAME.openssl.cer ]; then   
+    cp -n $PKI_PATH/$HOST_NAME.openssl.cer $PKI_PATH/$HOST_NAME.openssl.crt
+fi
+if [ -f $PKI_PATH/$HOST_NAME.java.cer ]; then   
+    cp -n $PKI_PATH/$HOST_NAME.java.cer $PKI_PATH/$HOST_NAME.java.crt
+fi
+
+# Generate the pem and add to the local openssl certs
 if [ -f $PKI_PATH/$HOST_NAME.openssl.crt ]; then            
+    if [ ! -f $PKI_PATH/$HOST_NAME.openssl.pem ] && [ -f $PKI_PATH/$HOST_NAME.openssl.key ]; then
+        cat $PKI_PATH/$HOST_NAME.openssl.key $PKI_PATH/$HOST_NAME.openssl.key > $PKI_PATH/$HOST_NAME.openssl.pem
+    fi
     mkdir -p /etc/pki/tls/certs
-    cp $PKI_PATH/$HOST_NAME.openssl.crt /etc/pki/tls/certs
-    cp $PKI_PATH/$HOST_NAME.openssl.key /etc/pki/tls/certs
+    cp -f $PKI_PATH/$HOST_NAME.openssl.crt /etc/pki/tls/certs
+    cp -f $PKI_PATH/$HOST_NAME.openssl.key /etc/pki/tls/certs
+    cp -f $PKI_PATH/$HOST_NAME.openssl.pem /etc/pki/tls/certs
 fi
 
 # Create the csr or import the certificate if the alias is not already present
@@ -259,6 +276,7 @@ if [ -z "$ACTION" ]; then
     echo
     echo "Nothing to do: Certs have already been generated"
     echo "Do you need to generate a certificate (crt) from the csr file with your CA?"
+    echo "Located $PKI_PATH"
     echo
 else
     echo "Contents of $PKI_PATH"
